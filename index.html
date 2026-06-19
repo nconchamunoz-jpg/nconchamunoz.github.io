@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Disponible — Ropa de Marca</title>
+<style>
+  :root{
+    --paper:#EDE9DF;
+    --ink:#1B1B17;
+    --kraft:#C9A876;
+    --kraft-dark:#8C6F44;
+    --tag-red:#A8402E;
+    --line:#1B1B17;
+    --green-ok:#3F5B3C;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  @font-face{
+    font-family:'sys-mono';
+    src:local('SF Mono'), local('Consolas');
+  }
+
+  body{
+    background:var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.025) 0px, rgba(0,0,0,0.025) 1px, transparent 1px, transparent 3px);
+    color:var(--ink);
+    font-family: 'Courier New', 'sys-mono', monospace;
+    min-height:100vh;
+    padding-bottom:80px;
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    border-bottom:3px solid var(--line);
+    padding:28px 20px 22px;
+    position:relative;
+    background:var(--paper);
+  }
+  .stamp{
+    position:absolute;
+    top:20px; right:18px;
+    border:2px solid var(--tag-red);
+    color:var(--tag-red);
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:1.5px;
+    padding:5px 10px;
+    transform:rotate(6deg);
+    border-radius:3px;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:3px;
+    text-transform:uppercase;
+    color:var(--kraft-dark);
+    margin-bottom:8px;
+    font-weight:700;
+  }
+  h1{
+    font-family:'Georgia', 'Times New Roman', serif;
+    font-weight:900;
+    font-size:clamp(32px,7vw,52px);
+    letter-spacing:-1px;
+    line-height:0.95;
+    max-width:560px;
+  }
+  .sub{
+    margin-top:12px;
+    font-size:13.5px;
+    line-height:1.6;
+    max-width:480px;
+    color:#3a3a32;
+  }
+  .meta-row{
+    display:flex;
+    gap:18px;
+    margin-top:18px;
+    font-size:11px;
+    letter-spacing:0.5px;
+    flex-wrap:wrap;
+  }
+  .meta-row span{
+    border:1px solid var(--ink);
+    padding:4px 9px;
+    border-radius:2px;
+    background:rgba(255,255,255,0.4);
+  }
+  .meta-row b{color:var(--green-ok);}
+
+  /* ---------- FILTER BAR ---------- */
+  .filterbar{
+    display:flex;
+    gap:8px;
+    padding:14px 20px;
+    overflow-x:auto;
+    border-bottom:1px solid rgba(0,0,0,0.2);
+    background:rgba(0,0,0,0.03);
+    -webkit-overflow-scrolling:touch;
+  }
+  .filterbar::-webkit-scrollbar{display:none;}
+  .pill{
+    flex:0 0 auto;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-size:12px;
+    font-weight:600;
+    padding:7px 14px;
+    border:1.5px solid var(--ink);
+    border-radius:20px;
+    background:var(--paper);
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all 0.15s ease;
+  }
+  .pill:hover{background:var(--kraft); transform:translateY(-1px);}
+  .pill.active{background:var(--ink); color:var(--paper);}
+
+  /* ---------- GRID ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px,1fr));
+    gap:18px;
+    padding:24px 20px;
+  }
+
+  .card{
+    background:#FAF7F0;
+    border:1.5px solid var(--ink);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    box-shadow:3px 3px 0 rgba(27,27,23,0.12);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover{
+    transform:translate(-2px,-2px);
+    box-shadow:6px 6px 0 rgba(27,27,23,0.16);
+  }
+  .card.sold{opacity:0.45;}
+  .card.sold .photo::after{
+    content:"VENDIDO";
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-weight:900;
+    font-size:20px;
+    letter-spacing:3px;
+    color:var(--tag-red);
+    background:rgba(250,247,240,0.55);
+    border:3px solid var(--tag-red);
+    transform:rotate(-8deg);
+    width:80%;
+    margin:auto;
+  }
+
+  .id-tag{
+    position:absolute;
+    top:-10px; left:14px;
+    background:var(--ink);
+    color:var(--paper);
+    font-size:11px;
+    font-weight:700;
+    padding:3px 8px;
+    letter-spacing:1px;
+    z-index:2;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .stock-badge{
+    position:absolute;
+    top:-10px; right:14px;
+    background:var(--green-ok);
+    color:var(--paper);
+    font-size:10.5px;
+    font-weight:700;
+    padding:3px 8px;
+    letter-spacing:0.3px;
+    z-index:2;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    border-radius:2px;
+  }
+
+  .photo{
+    aspect-ratio:1/1;
+    background:
+      repeating-linear-gradient(45deg, #E2DCCB 0, #E2DCCB 10px, #D8D1BC 10px, #D8D1BC 20px);
+    border-bottom:1.5px solid var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .photo img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .photo .placeholder{
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-size:11px;
+    text-align:center;
+    color:#8a8369;
+    letter-spacing:1px;
+    padding:10px;
+    background:rgba(250,247,240,0.85);
+    border:1px dashed #8a8369;
+  }
+
+  .info{
+    padding:14px 14px 12px;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+  }
+  .brand{
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-weight:800;
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:var(--kraft-dark);
+  }
+  .name{
+    font-family:'Georgia', serif;
+    font-weight:700;
+    font-size:16px;
+    line-height:1.25;
+    margin-top:3px;
+    margin-bottom:8px;
+  }
+  .specs{
+    font-size:11px;
+    color:#5a5648;
+    margin-bottom:10px;
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .specs span{
+    border-left:2px solid var(--kraft);
+    padding-left:5px;
+  }
+
+  .price-block{
+    margin-top:auto;
+    padding-top:10px;
+    border-top:1px dashed #b9b196;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+  }
+  .price-ref{
+    font-size:11px;
+    color:#8a8369;
+    text-decoration:line-through;
+  }
+  .price-now{
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-weight:900;
+    font-size:22px;
+    color:var(--tag-red);
+    line-height:1;
+  }
+  .price-min{
+    font-size:10px;
+    color:var(--green-ok);
+    margin-top:2px;
+  }
+
+  .actions{
+    display:flex;
+    gap:6px;
+    padding:0 14px 14px;
+  }
+  .btn{
+    flex:1;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-weight:700;
+    font-size:11.5px;
+    letter-spacing:0.3px;
+    text-align:center;
+    padding:10px 6px;
+    border:1.5px solid var(--ink);
+    text-decoration:none;
+    color:var(--ink);
+    cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .btn-wsp{background:#3F5B3C; color:#fff; border-color:#3F5B3C;}
+  .btn-wsp:hover{background:#324a30;}
+  .btn-fb{background:transparent;}
+  .btn-fb:hover{background:var(--ink); color:var(--paper);}
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    text-align:center;
+    padding:30px 20px 10px;
+    font-size:11px;
+    color:#8a8369;
+    letter-spacing:0.5px;
+  }
+
+  @media (max-width:480px){
+    .grid{grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:12px; padding:16px;}
+    h1{font-size:30px;}
+    .name{font-size:14px;}
+    .price-now{font-size:18px;}
+  }
+
+  :focus-visible{outline:2px solid var(--tag-red); outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="stamp">EN BODEGA<br>SAN RAMÓN</div>
+  <div class="eyebrow">Catálogo · Fardo Importado</div>
+  <h1>Ropa de marca,<br>precio de fardo.</h1>
+  <p class="sub">28 prendas con etiqueta o estado impecable — golf, outdoor y deportiva. Entrega coordinada en cualquier estación de Metro de Santiago. Stock único, no hay repuesto cuando se vende. Precio conversable si la oferta es justa.</p>
+  <div class="meta-row">
+    <span>📍 Entrega en cualquier Metro de Santiago</span>
+    <span>🤝 Precio conversable</span>
+    <span>💳 Efectivo / Transferencia</span>
+    <span><b>● 26 publicaciones</b></span>
+  </div>
+</header>
+
+<div class="filterbar" id="filterbar">
+  <button class="pill active" data-filter="all">Todo</button>
+  <button class="pill" data-filter="poleron">Polerones</button>
+  <button class="pill" data-filter="polera">Poleras / Polo</button>
+  <button class="pill" data-filter="cortavientos">Cortavientos</button>
+  <button class="pill" data-filter="pantalon">Pantalones / Calzas</button>
+</div>
+
+<main class="grid" id="grid">
+  <!-- Las tarjetas se generan con JS desde el arreglo PRENDAS -->
+</main>
+
+<footer>
+  Publicado por Nicolás · Contacto directo por WhatsApp o Facebook Marketplace
+</footer>
+
+<script>
+const TU_NUMERO = "56995712257"; // +569 95712257 en formato internacional sin espacios ni +
+const FB_PERFIL = "https://www.facebook.com/marketplace/profile/100061520152057/?ref=permalink&mibextid=dXMIcH";
+
+const PRENDAS = [
+  {id:1, cat:"pantalon", brand:"Lacoste", name:"Pantalón Gabardina Azul Marino", talla:"42", refPrice:60000, price:45000, minPrice:40000},
+  {id:2, cat:"cortavientos", brand:"FootJoy", name:"Cortavientos Colour Block 1/4 Zip", talla:"XL", refPrice:75000, price:45000, minPrice:40000},
+  {id:3, cat:"poleron", brand:"National", name:"Polerón Mangas Floreadas Negro", talla:"2XL", refPrice:35000, price:18000, minPrice:14000, stock:3},
+  {id:6, cat:"poleron", brand:"OGIO", name:"Polerón Técnico Endurance \"OPW\"", talla:"2XL", refPrice:45000, price:25000, minPrice:20000},
+  {id:7, cat:"cortavientos", brand:"Callaway", name:"Cortavientos Golf Azul Cielo", talla:"M", refPrice:45000, price:25000, minPrice:20000},
+  {id:8, cat:"cortavientos", brand:"Sun Outdoors", name:"Cortavientos c/Capucha Sun Retreats", talla:"2XL", refPrice:32000, price:15000, minPrice:12000},
+  {id:10, cat:"poleron", brand:"Adidas", name:"Polerón Polar Negro 1/4 Zip", talla:"XL", refPrice:45000, price:20000, minPrice:15000},
+  {id:11, cat:"poleron", brand:"New Balance", name:"Polerón Técnico Verde Agua 1/4 Zip", talla:"M", refPrice:45000, price:20000, minPrice:15000},
+  {id:13, cat:"poleron", brand:"Athletic Works", name:"Polerón 1/4 Zip Azul Marino", talla:"2XL", refPrice:25000, price:15000, minPrice:12000},
+  {id:14, cat:"poleron", brand:"Athletic Works", name:"Polerón c/Capucha Rojo/Negro", talla:"3XL", refPrice:25000, price:15000, minPrice:12000},
+  {id:15, cat:"polera", brand:"Callaway", name:"Polera Polo Golf Opti-Dri", talla:"XL", refPrice:35000, price:15000, minPrice:12000},
+  {id:16, cat:"poleron", brand:"Club Room", name:"Polerón 1/4 Zip Azul Marino", talla:"M", refPrice:35000, price:15000, minPrice:12000},
+  {id:17, cat:"polera", brand:"Under Armour", name:"Polera Técnica Morado/Magenta", talla:"XL", refPrice:40000, price:15000, minPrice:12000},
+  {id:18, cat:"polera", brand:"Tek Gear", name:"Polera Técnica DryTek Gris", talla:"XL", refPrice:35000, price:15000, minPrice:12000},
+  {id:19, cat:"poleron", brand:"Izod", name:"Polerón Polar Marino 1/4 Zip", talla:"XL", refPrice:40000, price:15000, minPrice:12000},
+  {id:20, cat:"pantalon", brand:"All in Motion", name:"Calza Deportiva Negra", talla:"M", refPrice:25000, price:12000, minPrice:10000},
+  {id:21, cat:"pantalon", brand:"Zūda", name:"Calza Compresión Premium Negra", talla:"M", refPrice:45000, price:12000, minPrice:10000},
+  {id:30, cat:"poleron", brand:"Adidas", name:"Polerón Polar 1/4 Zip c/Capucha Negro", talla:"2XL", refPrice:40000, price:18000, minPrice:15000},
+  {id:31, cat:"poleron", brand:"EvoShield", name:"Polerón 1/4 Zip Gris Jaspeado", talla:"XL", refPrice:35000, price:15000, minPrice:12000},
+  {id:23, cat:"polera", brand:"FootJoy", name:"Polera Polo ProDry Micro-Check", talla:"XL", refPrice:35000, price:12000, minPrice:10000},
+  {id:24, cat:"polera", brand:"Grand Slam", name:"Polera Polo Rayas Azul Marino", talla:"XXL", refPrice:35000, price:12000, minPrice:10000},
+  {id:25, cat:"polera", brand:"Score Apparel", name:"Polera Técnica YMCA Roja", talla:"M", refPrice:25000, price:10000, minPrice:8000},
+  {id:26, cat:"pantalon", brand:"Adidas Originals", name:"Pantalón Print Cómic Gris/Azul", talla:"L", refPrice:50000, price:20000, minPrice:15000},
+  {id:27, cat:"poleron", brand:"Favorite", name:"Pulóver Funnel Neck Gris", talla:"XL", refPrice:25000, price:12000, minPrice:10000},
+  {id:28, cat:"polera", brand:"Peter Millar", name:"Polo Summer Comfort Print Estrellas", talla:"L", refPrice:60000, price:15000, minPrice:12000},
+  {id:29, cat:"poleron", brand:"BCG", name:"Polerón Verde Agua 1/4 Zip", talla:"3XL", refPrice:35000, price:18000, minPrice:14000},
+];
+
+function clp(n){
+  return "$" + n.toLocaleString("es-CL");
+}
+
+function waLink(item){
+  const stockMsg = item.stock > 1 ? ` (hay ${item.stock} unidades disponibles)` : '';
+  const msg = `Hola! Me interesa la prenda: ${item.brand} - ${item.name} (Talla ${item.talla}) publicada a ${clp(item.price)}${stockMsg}. ¿Sigue disponible y se puede coordinar entrega en Metro?`;
+  return `https://wa.me/${TU_NUMERO}?text=${encodeURIComponent(msg)}`;
+}
+
+function renderGrid(filter){
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  const items = filter === "all" ? PRENDAS : PRENDAS.filter(p => p.cat === filter);
+
+  items.forEach(item => {
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div class="id-tag">#${String(item.id).padStart(2,'0')}</div>
+      ${item.stock > 1 ? `<div class="stock-badge">${item.stock} disponibles</div>` : ''}
+      <div class="photo" data-photo-slot="${item.id}">
+        <img src="fotos/${item.id}.jpg" alt="${item.brand} ${item.name}"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="placeholder" style="display:none;">FOTO<br>PENDIENTE</div>
+      </div>
+      <div class="info">
+        <div class="brand">${item.brand}</div>
+        <div class="name">${item.name}</div>
+        <div class="specs">
+          <span>Talla ${item.talla}</span>
+          <span>Ref. tienda ${clp(item.refPrice)}</span>
+        </div>
+        <div class="price-block">
+          <div>
+            <div class="price-ref">${clp(item.refPrice)}</div>
+            <div class="price-now">${clp(item.price)}</div>
+            <div class="price-min">Mín. combo ${clp(item.minPrice)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <a class="btn btn-wsp" href="${waLink(item)}" target="_blank" rel="noopener">WhatsApp</a>
+        <a class="btn btn-fb" href="${FB_PERFIL}" target="_blank" rel="noopener">Ver en FB</a>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+document.getElementById("filterbar").addEventListener("click", (e) => {
+  if(!e.target.classList.contains("pill")) return;
+  document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+  e.target.classList.add("active");
+  renderGrid(e.target.dataset.filter);
+});
+
+renderGrid("all");
+</script>
+
+</body>
+</html>
